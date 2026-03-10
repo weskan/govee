@@ -83,9 +83,8 @@ export function onvariableLedCountChanged(){
 }
 
 function GetRGBFromSubdevices(){
-	const RGBData = [];
-
 	if (subdevices.length === 2) {
+		const RGBData = [];
 		const left = subdevices[0];
 		const right = subdevices[1];
 		const maxLeds = Math.min(left.ledPositions.length, right.ledPositions.length);
@@ -123,10 +122,10 @@ function GetRGBFromSubdevices(){
 	const RGBData = [];
 	let offset = 0;
 
-	for(const subdevice of subdevices){
+	for (const subdevice of subdevices) {
 		const ledPositions = subdevice.ledPositions;
 
-		for(let i = 0 ; i < ledPositions.length; i++){
+		for (let i = 0; i < ledPositions.length; i++) {
 			const ledPosition = ledPositions[i];
 			let color;
 
@@ -147,7 +146,6 @@ function GetRGBFromSubdevices(){
 
 	return RGBData;
 }
-
 function GetDeviceRGB(){
 	const RGBData = new Array(ledCount * 3);
 
