@@ -1,6 +1,6 @@
 import udp from "@SignalRGB/udp";
 export function Name() { return "WesKan's Govee Plugin"; }
-export function Version() { return "1.0.1"; }
+export function Version() { return "1.0.5"; }
 export function Type() { return "network"; }
 export function Publisher() { return "WhirlwindFX/weskan"; }
 export function Size() { return [22, 1]; }
@@ -944,16 +944,16 @@ const GoveeDeviceLibrary = {
 		{
 			name: "RGBIC TV Light Bars Pro Left",
 			ledCount: 10,
-			size: [1, 10],
+			size: [10, 1],
 			ledNames: ["Led 1", "Led 2", "Led 3", "Led 4", "Led 5", "Led 6", "Led 7", "Led 8", "Led 9", "Led 10"],
-			ledPositions: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9]],
+			ledPositions: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]],
 		},
 		{
 			name: "RGBIC TV Light Bars Pro Right",
 			ledCount: 10,
-			size: [1, 10],
+			size: [10, 1],
 			ledNames: ["Led 1", "Led 2", "Led 3", "Led 4", "Led 5", "Led 6", "Led 7", "Led 8", "Led 9", "Led 10"],
-			ledPositions: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9]],
+			ledPositions: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]],
 		},
 	]
 },
