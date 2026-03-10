@@ -1,6 +1,6 @@
 import udp from "@SignalRGB/udp";
 export function Name() { return "WesKan's Govee Plugin"; }
-export function Version() { return "1.0.5"; }
+export function Version() { return "1.0.8"; }
 export function Type() { return "network"; }
 export function Publisher() { return "WhirlwindFX/weskan"; }
 export function Size() { return [22, 1]; }
