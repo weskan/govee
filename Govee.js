@@ -83,42 +83,6 @@ export function onvariableLedCountChanged(){
 }
 
 function GetRGBFromSubdevices(){
-	if (subdevices.length === 2) {
-		const RGBData = [];
-		const left = subdevices[0];
-		const right = subdevices[1];
-		const maxLeds = Math.min(left.ledPositions.length, right.ledPositions.length);
-
-		for (let i = 0; i < maxLeds; i++) {
-			const leftPos = left.ledPositions[i];
-			const rightPos = right.ledPositions[i];
-
-			let leftColor;
-			let rightColor;
-
-			if (LightingMode === "Forced") {
-				leftColor = hexToRgb(forcedColor);
-				rightColor = hexToRgb(forcedColor);
-			} else {
-				leftColor = device.subdeviceColor(left.id, leftPos[0], leftPos[1]);
-				rightColor = device.subdeviceColor(right.id, rightPos[0], rightPos[1]);
-			}
-
-			const leftIndex = (i * 2) * 3;
-			const rightIndex = (i * 2 + 1) * 3;
-
-			RGBData[leftIndex] = leftColor[0];
-			RGBData[leftIndex + 1] = leftColor[1];
-			RGBData[leftIndex + 2] = leftColor[2];
-
-			RGBData[rightIndex] = rightColor[0];
-			RGBData[rightIndex + 1] = rightColor[1];
-			RGBData[rightIndex + 2] = rightColor[2];
-		}
-
-		return RGBData;
-	}
-
 	const RGBData = [];
 	let offset = 0;
 
