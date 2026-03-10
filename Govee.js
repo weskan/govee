@@ -83,40 +83,70 @@ export function onvariableLedCountChanged(){
 }
 
 function GetRGBFromSubdevices(){
+	const RGBData = [];
+
 	if (subdevices.length === 2) {
 		const left = subdevices[0];
 		const right = subdevices[1];
 		const maxLeds = Math.min(left.ledPositions.length, right.ledPositions.length);
-		const RGBData = [];
 
 		for (let i = 0; i < maxLeds; i++) {
 			const leftPos = left.ledPositions[i];
 			const rightPos = right.ledPositions[i];
+
+			let leftColor;
+			let rightColor;
+
+			if (LightingMode === "Forced") {
+				leftColor = hexToRgb(forcedColor);
+				rightColor = hexToRgb(forcedColor);
+			} else {
+				leftColor = device.subdeviceColor(left.id, leftPos[0], leftPos[1]);
+				rightColor = device.subdeviceColor(right.id, rightPos[0], rightPos[1]);
+			}
+
+			const leftIndex = (i * 2) * 3;
+			const rightIndex = (i * 2 + 1) * 3;
+
+			RGBData[leftIndex] = leftColor[0];
+			RGBData[leftIndex + 1] = leftColor[1];
+			RGBData[leftIndex + 2] = leftColor[2];
+
+			RGBData[rightIndex] = rightColor[0];
+			RGBData[rightIndex + 1] = rightColor[1];
+			RGBData[rightIndex + 2] = rightColor[2];
+		}
+
+		return RGBData;
+	}
+
+	const RGBData = [];
+	let offset = 0;
+
+	for(const subdevice of subdevices){
+		const ledPositions = subdevice.ledPositions;
+
+		for(let i = 0 ; i < ledPositions.length; i++){
+			const ledPosition = ledPositions[i];
 			let color;
 
 			if (LightingMode === "Forced") {
 				color = hexToRgb(forcedColor);
 			} else {
-				// Prefer left bar color if present; fall back to right
-				const leftColor = device.subdeviceColor(left.id, leftPos[0], leftPos[1]);
-				const rightColor = device.subdeviceColor(right.id, rightPos[0], rightPos[1]);
-
-				color = leftColor;
-				if (
-					(rightColor[0] + rightColor[1] + rightColor[2]) >
-					(leftColor[0] + leftColor[1] + leftColor[2])
-				) {
-					color = rightColor;
-				}
+				color = device.subdeviceColor(subdevice.id, ledPosition[0], ledPosition[1]);
 			}
 
-			RGBData[i * 3] = color[0];
-			RGBData[i * 3 + 1] = color[1];
-			RGBData[i * 3 + 2] = color[2];
+			const rgbIndex = (offset + i) * 3;
+			RGBData[rgbIndex] = color[0];
+			RGBData[rgbIndex + 1] = color[1];
+			RGBData[rgbIndex + 2] = color[2];
 		}
 
-		return RGBData;
+		offset += ledPositions.length;
 	}
+
+	return RGBData;
+}
 
 	const RGBData = [];
 	let offset = 0;
