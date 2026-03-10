@@ -902,7 +902,24 @@ const GoveeDeviceLibrary = {
 	state: 1,
 	supportRazer: true,
 	supportDreamView: true,
-	ledCount: 10
+	ledCount: 0,
+	usesSubDevices: true,
+	subdevices: [
+		{
+			name: "RGBIC TV Light Bars Pro Left",
+			ledCount: 10,
+			size: [10, 1],
+			ledNames: ["Led 1", "Led 2", "Led 3", "Led 4", "Led 5", "Led 6", "Led 7", "Led 8", "Led 9", "Led 10"],
+			ledPositions: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]],
+		},
+		{
+			name: "RGBIC TV Light Bars Pro Right",
+			ledCount: 10,
+			size: [10, 1],
+			ledNames: ["Led 1", "Led 2", "Led 3", "Led 4", "Led 5", "Led 6", "Led 7", "Led 8", "Led 9", "Led 10"],
+			ledPositions: [[9, 0], [8, 0], [7, 0], [6, 0], [5, 0], [4, 0], [3, 0], [2, 0], [1, 0], [0, 0]],
+		},
+	]
 },
 	H6051: {
 		name: "Table Lamp Lite",
