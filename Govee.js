@@ -88,9 +88,11 @@ function GetRGBFromSubdevices(){
 
 	for (const subdevice of subdevices) {
 		const ledPositions = subdevice.ledPositions;
+		const isRightBar = subdevice.name.includes("Right");
 
 		for (let i = 0; i < ledPositions.length; i++) {
-			const ledPosition = ledPositions[i];
+			const sampleIndex = isRightBar ? (ledPositions.length - 1 - i) : i;
+			const ledPosition = ledPositions[sampleIndex];
 			let color;
 
 			if (LightingMode === "Forced") {
@@ -917,7 +919,7 @@ const GoveeDeviceLibrary = {
 			ledCount: 10,
 			size: [10, 1],
 			ledNames: ["Led 1", "Led 2", "Led 3", "Led 4", "Led 5", "Led 6", "Led 7", "Led 8", "Led 9", "Led 10"],
-			ledPositions: [[9, 0], [8, 0], [7, 0], [6, 0], [5, 0], [4, 0], [3, 0], [2, 0], [1, 0], [0, 0]],
+			ledPositions: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]],
 		},
 	]
 },
