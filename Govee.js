@@ -896,7 +896,7 @@ const GoveeDeviceLibrary = {
 		ledCount: 15
 	},
 	H6048: {
-	name: "RGBIC Gaming Light Bars Pro",
+	name: "RGBIC TV Light Bars Pro",
 	deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h6048.png",
 	sku: "H6048",
 	state: 1,
@@ -906,18 +906,18 @@ const GoveeDeviceLibrary = {
 	usesSubDevices: true,
 	subdevices: [
 		{
-			name: "RGBIC Gaming Light Bars Pro Left",
+			name: "RGBIC TV Light Bars Pro Left",
 			ledCount: 10,
 			size: [10, 1],
 			ledNames: ["Led 1", "Led 2", "Led 3", "Led 4", "Led 5", "Led 6", "Led 7", "Led 8", "Led 9", "Led 10"],
 			ledPositions: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]],
 		},
 		{
-			name: "RGBIC Gaming Light Bars Pro Right",
+			name: "RGBIC TV Light Bars Pro Right",
 			ledCount: 10,
 			size: [10, 1],
 			ledNames: ["Led 1", "Led 2", "Led 3", "Led 4", "Led 5", "Led 6", "Led 7", "Led 8", "Led 9", "Led 10"],
-			ledPositions: [[9, 0], [8, 0], [7, 0], [6, 0], [5, 0], [4, 0], [3, 0], [2, 0], [1, 0], [0, 0]],
+			ledPositions: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]],
 		},
 	]
 },
