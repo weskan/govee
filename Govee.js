@@ -148,34 +148,6 @@ function GetRGBFromSubdevices(){
 	return RGBData;
 }
 
-	const RGBData = [];
-	let offset = 0;
-
-	for(const subdevice of subdevices){
-		const ledPositions = subdevice.ledPositions;
-
-		for(let i = 0 ; i < ledPositions.length; i++){
-			const ledPosition = ledPositions[i];
-			let color;
-
-			if (LightingMode === "Forced") {
-				color = hexToRgb(forcedColor);
-			} else {
-				color = device.subdeviceColor(subdevice.id, ledPosition[0], ledPosition[1]);
-			}
-
-			const rgbIndex = (offset + i) * 3;
-			RGBData[rgbIndex] = color[0];
-			RGBData[rgbIndex + 1] = color[1];
-			RGBData[rgbIndex + 2] = color[2];
-		}
-
-		offset += ledPositions.length;
-	}
-
-	return RGBData;
-}
-
 function GetDeviceRGB(){
 	const RGBData = new Array(ledCount * 3);
 
