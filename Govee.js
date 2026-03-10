@@ -88,11 +88,9 @@ function GetRGBFromSubdevices(){
 
 	for (const subdevice of subdevices) {
 		const ledPositions = subdevice.ledPositions;
-		const isRightBar = subdevice.name.includes("Right");
 
 		for (let i = 0; i < ledPositions.length; i++) {
-			const sampleIndex = isRightBar ? (ledPositions.length - 1 - i) : i;
-			const ledPosition = ledPositions[sampleIndex];
+			const ledPosition = ledPositions[i];
 			let color;
 
 			if (LightingMode === "Forced") {
