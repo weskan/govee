@@ -119,6 +119,26 @@ function GetDeviceRGB(){
 
 	return RGBData;
 }
+function SetH6048LedMap(){
+	ledCount = 20;
+	ledNames = [];
+	ledPositions = [];
+
+	// Left bar: 10 LEDs
+	for (let i = 0; i < 10; i++) {
+		ledNames.push(`Left ${i + 1}`);
+		ledPositions.push([0, i]);
+	}
+
+	// Right bar: 10 LEDs, reversed so motion matches the left bar
+	for (let i = 0; i < 10; i++) {
+		ledNames.push(`Right ${i + 1}`);
+		ledPositions.push([1, 9 - i]);
+	}
+
+	device.setSize([2, 10]);
+	device.setControllableLeds(ledNames, ledPositions);
+}
 function SetLedCount(count){
 	ledCount = count;
 
