@@ -1,8 +1,8 @@
 import udp from "@SignalRGB/udp";
-export function Name() { return "WesKan's Govee Plugin"; }
-export function Version() { return "1.0.8"; }
+export function Name() { return "Govee"; }
+export function Version() { return "1.0.0"; }
 export function Type() { return "network"; }
-export function Publisher() { return "WhirlwindFX/weskan"; }
+export function Publisher() { return "WhirlwindFX"; }
 export function Size() { return [22, 1]; }
 export function DefaultPosition() {return [75, 70]; }
 export function DefaultScale(){return 8.0;}
@@ -10,15 +10,14 @@ export function DefaultScale(){return 8.0;}
 controller:readonly
 discovery: readonly
 TurnOffOnShutdown:readonly
-variableLedCount:readonly
 LightingMode:readonly
 forcedColor:readonly
 */
 export function ControllableParameters() {
 	return [
-		{"property":"TurnOffOnShutdown", "group":"settings", "label":"Turn off on App Exit", "type":"boolean", "default":"false"},
-		{"property":"LightingMode", "group":"lighting", "label":"Lighting Mode", "type":"combobox", "values":["Canvas", "Forced"], "default":"Canvas"},
-		{"property":"forcedColor", "group":"lighting", "label":"Forced Color", "min":"0", "max":"360", "type":"color", "default":"#009bde"},
+		{property:"TurnOffOnShutdown", group:"settings", label:"Turn off on App Exit", description: "", type:"boolean", default:"false"},
+		{property:"LightingMode", group:"lighting", label:"Lighting Mode", description: "Determines where the device's RGB comes from. Canvas will pull from the active Effect, while Forced will override it to a specific color", type:"combobox", values:["Canvas", "Forced"], default:"Canvas"},
+		{property:"forcedColor", group:"lighting", label:"Forced Color", description: "The color used when 'Forced' Lighting Mode is enabled", min:"0", max:"360", type:"color", default:"#009bde"},
 	];
 }
 
@@ -29,7 +28,6 @@ let govee;
 let ledCount = 4;
 let ledNames = [];
 let ledPositions = [];
-let subdevices = [];
 
 export function Initialize(){
 	device.addFeature("base64");
@@ -46,27 +44,21 @@ export function Initialize(){
 	UDPServer = new UdpSocketServer({
 		ip : controller.ip,
 		broadcastPort : 4003,
-		listenPort : 4002
 	});
 
 	UDPServer.start();
 	//Establish a new udp server. This is now required for using udp.send.
 
-	ClearSubdevices();
 	fetchDeviceInfoFromTableAndConfigure();
 
 	govee = new GoveeProtocol(controller.ip, controller.supportDreamView, controller.supportRazer);
-	// This is what happens in my wireshark
+
 	govee.setDeviceState(true);
 	govee.SetRazerMode(true);
-	govee.SetRazerMode(true);
-	govee.setDeviceState(true);
 }
 
 export function Render(){
-	const RGBData = subdevices.length > 0 ? GetRGBFromSubdevices() : GetDeviceRGB();
-
-	govee.SendRGB(RGBData);
+	govee.SendRGB();
 	device.pause(10);
 }
 
@@ -78,38 +70,35 @@ export function Shutdown(suspend){
 	}
 }
 
-export function onvariableLedCountChanged(){
-	SetLedCount(variableLedCount);
-}
+function fetchDeviceInfoFromTableAndConfigure() {
+	if (GoveeDeviceLibrary.hasOwnProperty(controller.sku)) {
+		const GoveeDeviceInfo = GoveeDeviceLibrary[controller.sku];
+		device.setName(`Govee ${GoveeDeviceInfo.name}`);
 
-function GetRGBFromSubdevices(){
-	const RGBData = [];
-	let offset = 0;
+		// Special handling for H6048: split into two channels
+		if (controller.sku === "H6048") {
+			device.addChannel("Left Bar", 10);
+			device.channel("Left Bar").SetLedLimit(10);
 
-	for (const subdevice of subdevices) {
-		const ledPositions = subdevice.ledPositions;
+			device.addChannel("Right Bar", 10);
+			device.channel("Right Bar").SetLedLimit(10);
 
-		for (let i = 0; i < ledPositions.length; i++) {
-			const ledPosition = ledPositions[i];
-			let color;
-
-			if (LightingMode === "Forced") {
-				color = hexToRgb(forcedColor);
-			} else {
-				color = device.subdeviceColor(subdevice.id, ledPosition[0], ledPosition[1]);
-			}
-
-			const rgbIndex = (offset + i) * 3;
-			RGBData[rgbIndex] = color[0];
-			RGBData[rgbIndex + 1] = color[1];
-			RGBData[rgbIndex + 2] = color[2];
+			device.SetLedLimit(20);
+			return;
 		}
 
-		offset += ledPositions.length;
+		device.addChannel(`Channel 1`, GoveeDeviceInfo.ledCount);
+		device.channel(`Channel 1`).SetLedLimit(GoveeDeviceInfo.ledCount);
+		device.SetLedLimit(GoveeDeviceInfo.ledCount);
+	} else {
+		device.log(`SKU (${controller.sku}) not found, using single led mode!`);
+		device.setName(`Govee: ${controller.sku}`);
+		device.addChannel(`Channel 1`, 30);
+		device.channel(`Channel 1`).SetLedLimit(30);
+		device.SetLedLimit(30);
 	}
-
-	return RGBData;
 }
+
 function GetDeviceRGB(){
 	const RGBData = new Array(ledCount * 3);
 
@@ -130,37 +119,6 @@ function GetDeviceRGB(){
 
 	return RGBData;
 }
-
-function fetchDeviceInfoFromTableAndConfigure() {
-	if(GoveeDeviceLibrary.hasOwnProperty(controller.sku)){
-		const GoveeDeviceInfo = GoveeDeviceLibrary[controller.sku];
-		device.setName(`Govee ${GoveeDeviceInfo.name}`);
-
-		if(GoveeDeviceInfo.hasVariableLedCount){
-			device.addProperty({"property": "variableLedCount", label: "Segment Count", "type": "number", "min": 1, "max": 60, default: GoveeDeviceInfo.ledCount, step: 1});
-			SetLedCount(variableLedCount);
-		}else{
-			SetLedCount(GoveeDeviceInfo.ledCount);
-			device.removeProperty("variableLedCount");
-		}
-
-		if(GoveeDeviceInfo.usesSubDevices){
-			device.SetIsSubdeviceController(true);
-
-			for(const subdevice of GoveeDeviceInfo.subdevices){
-				CreateSubDevice(subdevice);
-			}
-		}else{
-			device.SetIsSubdeviceController(false);
-		}
-
-	}else{
-		device.log("Using Default Layout...");
-		device.setName(`Govee: ${controller.sku}`);
-		SetLedCount(20);
-	}
-}
-
 function SetLedCount(count){
 	ledCount = count;
 
@@ -177,28 +135,6 @@ function CreateLedMap(){
 		ledNames.push(`Led ${i + 1}`);
 		ledPositions.push([i, 0]);
 	}
-}
-
-function ClearSubdevices(){
-	for(const subdevice of device.getCurrentSubdevices()){
-		device.removeSubdevice(subdevice);
-	}
-
-	subdevices = [];
-}
-
-function CreateSubDevice(subdevice){
-	const count = device.getCurrentSubdevices().length;
-	device.log(subdevice);
-	subdevice.id = `${subdevice.name} ${count + 1}`;
-	device.createSubdevice(subdevice.id);
-
-	device.setSubdeviceName(subdevice.id, subdevice.name);
-	device.setSubdeviceImage(subdevice.id, controller.deviceImage);
-	device.setSubdeviceSize(subdevice.id, subdevice.size[0], subdevice.size[1]);
-	device.setSubdeviceLeds(subdevice.id, subdevice.ledNames, subdevice.ledPositions);
-
-	subdevices.push(subdevice);
 }
 
 function hexToRgb(hex) {
@@ -277,12 +213,13 @@ export function DiscoveryService() {
 	this.forceDiscovery = function(value) {
 		const packetType = JSON.parse(value.response).msg.cmd;
 		//service.log(`Type: ${packetType}`);
-		
+
 		if(packetType != "scan"){
 			return;
 		}
-		
+
 		const isValid = JSON.parse(value.response).msg.data.hasOwnProperty("ip");
+
 		if(!isValid){
 			return;
 		}
@@ -329,12 +266,13 @@ export function DiscoveryService() {
 	this.Discovered = function(value) {
 		const packetType = JSON.parse(value.response).msg.cmd;
 		//service.log(`Type: ${packetType}`);
-		
+
 		if(packetType != "scan"){
 			return;
 		}
-		
+
 		const isValid = JSON.parse(value.response).msg.data.hasOwnProperty("ip");
+
 		if(!isValid){
 			return;
 		}
@@ -502,8 +440,11 @@ class GoveeProtocol {
 
 	createDreamViewPacket(colors) {
 		// Define the Dreamview protocol header
-		const header = [0xBB, 0x00, 0x20, 0xB0, 0x01, colors.length / 3];
-		const fullPacket = header.concat(colors);
+
+		const packetToCheck = [0x01, colors.length].concat(colors);
+
+		const header = [0xBB, (packetToCheck.length >> 8 & 0xff), (packetToCheck.length & 0xff), 0xB0];
+		const fullPacket = header.concat(packetToCheck);
 		const checksum = this.calculateXorChecksum(fullPacket);
 		fullPacket.push(checksum);
 
@@ -512,9 +453,9 @@ class GoveeProtocol {
 
 	createRazerPacket(colors) {
 		// Define the Razer protocol header
-		const header = [0xBB, 0x00, 0x0E, 0xB0, 0x01, colors.length / 3];
+		const header = [0xBB, 0x00, 0x0E, 0xB0, 0x01, colors.length];
 		const fullPacket = header.concat(colors);
-		fullPacket.push(0); // Checksum
+		fullPacket.push(this.calculateXorChecksum(fullPacket)); // Checksum
 
 		return fullPacket;
 	}
@@ -557,20 +498,63 @@ class GoveeProtocol {
 		}));
 	}
 
-	SendRGB(RGBData) {
+	SendRGB() {
+	let RGBData = [];
 
-		if (this.supportDreamView) {
-			const packet = this.createDreamViewPacket(RGBData);
-			this.SendEncodedPacket(packet);
-		} else if(this.supportRazer) {
-			const packet = this.createRazerPacket(RGBData);
-			this.SendEncodedPacket(packet);
-		} else{
-			this.SetStaticColor(RGBData.slice(0, 3));
+	// Special handling for H6048: combine Left Bar + Right Bar into one packet
+	if (controller.sku === "H6048") {
+		const leftChannel = device.channel("Left Bar");
+		const rightChannel = device.channel("Right Bar");
+
+		let leftRGB = [];
+		let rightRGB = [];
+
+		if (LightingMode === "Forced") {
+			leftRGB = device.createColorArray(forcedColor, 10, "Inline");
+			rightRGB = device.createColorArray(forcedColor, 10, "Inline");
+		} else if (leftChannel.shouldPulseColors() || rightChannel.shouldPulseColors()) {
+			const leftPulse = leftChannel.shouldPulseColors()
+				? device.getChannelPulseColor("Left Bar")
+				: "#000000";
+			const rightPulse = rightChannel.shouldPulseColors()
+				? device.getChannelPulseColor("Right Bar")
+				: "#000000";
+
+			leftRGB = device.createColorArray(leftPulse, 10, "Inline");
+			rightRGB = device.createColorArray(rightPulse, 10, "Inline");
+		} else {
+			leftRGB = leftChannel.getColors("Inline");
+			rightRGB = rightChannel.getColors("Inline");
+		}
+
+		// Start with straight concat
+		RGBData = leftRGB.concat(rightRGB);
+	} else {
+		const ChannelLedCount = device.channel(`Channel 1`).LedCount();
+		const componentChannel = device.channel(`Channel 1`);
+
+		if (LightingMode === "Forced") {
+			RGBData = device.createColorArray(forcedColor, ChannelLedCount, "Inline");
+		} else if (componentChannel.shouldPulseColors()) {
+			const pulseColor = device.getChannelPulseColor(`Channel 1`);
+			const pulseCount = device.channel(`Channel 1`).LedLimit();
+			RGBData = device.createColorArray(pulseColor, pulseCount, "Inline");
+		} else {
+			RGBData = device.channel(`Channel 1`).getColors("Inline");
 		}
 	}
-}
 
+	if (this.supportDreamView) {
+		const packet = this.createDreamViewPacket(RGBData);
+		this.SendEncodedPacket(packet);
+	} else if (this.supportRazer) {
+		const packet = this.createRazerPacket(RGBData);
+		this.SendEncodedPacket(packet);
+	} else {
+		this.SetStaticColor(RGBData.slice(0, 3));
+	}
+}
+}
 class UdpSocketServer{
 	constructor (args) {
 		this.count = 0;
@@ -580,6 +564,14 @@ class UdpSocketServer{
 		this.broadcastPort = args?.broadcastPort ?? 4001;
 		this.ipToConnectTo = args?.ip ?? "239.255.255.250";
 		this.isDiscoveryServer = args?.isDiscoveryServer ?? false;
+
+		this.log = (msg) => { this.isDiscoveryServer ? service.log(msg) : device.log(msg); };
+
+		this.responseCallbackFunction = (msg) => { this.log("No Response Callback Set Callback cannot function"); msg; };
+	}
+
+	setCallbackFunction(responseCallbackFunction) {
+		this.responseCallbackFunction = responseCallbackFunction;
 	}
 
 	write(packet, address, port) {
@@ -593,7 +585,7 @@ class UdpSocketServer{
 	send(packet) {
 		if(!this.server) {
 			this.server = udp.createSocket();
-			device.log("Defining new UDP Socket so we can send data.");
+			this.log("Defining new UDP Socket so we can send data.");
 		}
 
 		this.server.send(packet);
@@ -603,7 +595,6 @@ class UdpSocketServer{
 		this.server = udp.createSocket();
 
 		if(this.server){
-
 			// Given we're passing class methods to the server, we need to bind the context (this instance) to the function pointer
 			this.server.on('error', this.onError.bind(this));
 			this.server.on('message', this.onMessage.bind(this));
@@ -611,7 +602,6 @@ class UdpSocketServer{
 			this.server.on('connection', this.onConnection.bind(this));
 			this.server.bind(this.listenPort);
 			this.server.connect(this.ipToConnectTo, this.broadcastPort);
-
 		}
 	};
 
@@ -623,48 +613,52 @@ class UdpSocketServer{
 	}
 
 	onConnection(){
-		service.log('Connected to remote socket!');
-		service.log("Remote Address:");
-		service.log(this.server.remoteAddress(), {pretty: true});
-		service.log("Sending Check to socket");
+		this.log('Connected to remote socket!');
+		this.log("Remote Address:");
+		this.log(this.server.remoteAddress(), {pretty: true});
 
-		const bytesWritten = this.server.send(JSON.stringify({
-			msg: {
-				cmd: "scan",
-				data: {
-					account_topic: "reserve",
-				},
+		if(this.isDiscoveryServer) {
+			this.log("Sending Check to socket");
+
+			const bytesWritten = this.server.send(JSON.stringify({
+				msg: {
+					cmd: "scan",
+					data: {
+						account_topic: "reserve",
+					},
+				}
+			}));
+
+			if(bytesWritten === -1){
+				this.log('Error sending data to remote socket');
 			}
-		}));
-
-		if(bytesWritten === -1){
-			service.log('Error sending data to remote socket');
 		}
 	};
 
 	onListenerResponse(msg) {
-		service.log('Data received from client');
-		service.log(msg, {pretty: true});
+		this.log('Data received from client');
+		this.log(msg, {pretty: true});
 	}
 
 	onListening(){
 		const address = this.server.address();
-		service.log(`Server is listening at port ${address.port}`);
+		this.log(`Server is listening at port ${address.port}`);
 
 		// Check if the socket is bound (no error means it's bound but we'll check anyway)
-		service.log(`Socket Bound: ${this.server.state === this.server.BoundState}`);
+		this.log(`Socket Bound: ${this.server.state === this.server.BoundState}`);
 	};
 	onMessage(msg){
-		service.log('Data received from client');
-		service.log(msg, {pretty: true});
+		this.log('Data received from client');
+		this.log(msg, {pretty: true});
 
 		if(this.isDiscoveryServer) {
 			discovery.forceDiscovery(msg);
+			this.server.close();
 		}
 	};
 	onError(code, message){
-		service.log(`Error: ${code} - ${message}`);
-		//this.server.close(); // We're done here
+		this.log(`Error: ${code} - ${message}`);
+		this.server.close(); // We're done here
 	};
 }
 
@@ -677,12 +671,10 @@ class IPCache{
 		this.PopulateCacheFromStorage();
 	}
 	Add(key, value){
-		if(!this.cacheMap.has(key)) {
-			service.log(`Adding ${key} to IP Cache...`);
+		service.log(`Adding ${key} to IP Cache...`);
 
-			this.cacheMap.set(key, value);
-			this.Persist();
-		}
+		this.cacheMap.set(key, value);
+		this.Persist();
 	}
 
 	Remove(key){
@@ -759,7 +751,7 @@ const GoveeDeviceLibrary = {
 		state: 1,
 		supportRazer: true,
 		supportDreamView: true,
-		ledCount: 15
+		ledCount: 30
 	},
 	H6062: {
 		name: "Glide Wall Light",
@@ -805,7 +797,7 @@ const GoveeDeviceLibrary = {
 		state: 1,
 		supportRazer: true,
 		supportDreamView: true,
-		ledCount: 10
+		ledCount: 20
 	},
 	H610A: {
 		name: "Glide Lively Wall Light",
@@ -813,8 +805,8 @@ const GoveeDeviceLibrary = {
 		sku: "H610A",
 		state: 1,
 		supportRazer: false,
-		supportDreamView: false,
-		ledCount: 1
+		supportDreamView: true,
+		ledCount: 24
 	},
 	H610B: {
 		name: "Glide Music Wall Light",
@@ -902,24 +894,7 @@ const GoveeDeviceLibrary = {
 	state: 1,
 	supportRazer: true,
 	supportDreamView: true,
-	ledCount: 0,
-	usesSubDevices: true,
-	subdevices: [
-		{
-			name: "RGBIC TV Light Bars Pro Left",
-			ledCount: 10,
-			size: [1, 10],
-			ledNames: ["Led 1", "Led 2", "Led 3", "Led 4", "Led 5", "Led 6", "Led 7", "Led 8", "Led 9", "Led 10"],
-			ledPositions: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9]],
-		},
-		{
-			name: "RGBIC TV Light Bars Pro Right",
-			ledCount: 10,
-			size: [1, 10],
-			ledNames: ["Led 1", "Led 2", "Led 3", "Led 4", "Led 5", "Led 6", "Led 7", "Led 8", "Led 9", "Led 10"],
-			ledPositions: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9]],
-		},
-	]
+	ledCount: 20
 },
 	H6051: {
 		name: "Table Lamp Lite",
@@ -973,7 +948,7 @@ const GoveeDeviceLibrary = {
 		state: 1,
 		supportRazer: true,
 		supportDreamView: true,
-		ledCount: 15
+		ledCount: 70
 	},
 	H61A3: {
 		name: "4m RGBIC Neon Rope Lights",
@@ -1047,6 +1022,15 @@ const GoveeDeviceLibrary = {
 		supportDreamView: false,
 		ledCount: 1
 	},
+	H61B5: {
+		name: "3m RGBIC Neon TV Backlight",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h61b2.png",
+		sku: "H61B5",
+		state: 1,
+		supportRazer: false,
+		supportDreamView: false,
+		ledCount: 15
+	},
 	H61C2: {
 		name: "RGBIC LED Neon Rope Lights for Desks",
 		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h61c2.png",
@@ -1064,6 +1048,15 @@ const GoveeDeviceLibrary = {
 		supportRazer: true,
 		supportDreamView: true,
 		ledCount: 16
+	},
+	H61C5: {
+		name: "RGBIC LED Neon Rope Lights for Desks",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h61c2.png",
+		sku: "H61C5",
+		state: 1,
+		supportDreamView: true,
+		supportRazer: true,
+		ledCount: 15
 	},
 	H61E0: {
 		name: "LED Strip Light M1",
@@ -1136,7 +1129,7 @@ const GoveeDeviceLibrary = {
 		state: 1,
 		supportRazer: true,
 		supportDreamView: true,
-		ledCount: 15
+		ledCount: 12
 	},
 	H618E: {
 		name: "2*10m RGBIC Bassic Strip Lights",
@@ -1183,6 +1176,15 @@ const GoveeDeviceLibrary = {
 		supportDreamView: false,
 		ledCount: 1
 	},
+	H615D: {
+		name: "15m RGB Strip Light",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h615a.png",
+		sku: "H615D",
+		state: 1,
+		supportRazer: false,
+		supportDreamView: false,
+		ledCount: 1
+	},
 	H618F: {
 		name: "2*15m RGBIC LED Strip Light",
 		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h618a.png",
@@ -1220,14 +1222,14 @@ const GoveeDeviceLibrary = {
 		ledCount: 14
 	},
 	H6079: {
-        name: "RGBICWW Floor Lamp Pro",
-        deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h6079.png",
-        SKU: "H6079",
-        state: 1,
-        supportRazer: true,
-        supportDreamView: true,
-        ledCount: 10,
-    },
+		name: "RGBICWW Floor Lamp Pro",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h6079.png",
+		SKU: "H6079",
+		state: 1,
+		supportRazer: true,
+		supportDreamView: true,
+		ledCount: 10,
+	},
 	H7060: {
 		name: "4 Pack RGBIC Flood Lights",
 		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h7060.png",
@@ -1273,6 +1275,15 @@ const GoveeDeviceLibrary = {
 		supportDreamView: true,
 		ledCount: 7
 	},
+	H6167: {
+		name: "RGBIC TV Light Bars",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h6168.png",
+		sku: "H6167",
+		state: 1,
+		supportDreamView: true,
+		supportRazer: true,
+		ledCount: 10
+	},
 	H6168: {
 		name: "RGBIC TV Light Bars",
 		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h6168.png",
@@ -1300,13 +1311,13 @@ const GoveeDeviceLibrary = {
 		]
 	},
 	H7075: {
-        name: "Govee Outdoor Wall Light, 1500LM",
-        deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h7075.png",
-        sku: "H7075",
-        state: 1,
-        supportRazer: true,
-        supportDreamView: true,
-        ledCount: 10
+		name: "Govee Outdoor Wall Light, 1500LM",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h7075.png",
+		sku: "H7075",
+		state: 1,
+		supportRazer: true,
+		supportDreamView: true,
+		ledCount: 10
 	},
 	H606A: {
 		name: "Hex Glide Ultra",
@@ -1317,5 +1328,41 @@ const GoveeDeviceLibrary = {
 		supportDreamView: true,
 		ledCount: 10, // Linked panels that goes up to 21 per controller
 		hasVariableLedCount: true
-	}
+	},
+	H8022 : {
+		name: "RGBIC Table Lamp",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h8022.png",
+		sku: "H8022",
+		state: 1,
+		supportDreamView: true,
+		supportRazer: true,
+		ledCount: 15
+	},
+	H8072: {
+		name: "RGBIC Floor Lamp",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h8072.png",
+		sku: "H8072",
+		state: 1,
+		supportDreamView: true,
+		supportRazer: true,
+		ledCount: 15
+	},
+	H7053: {
+		name: "Outdoor Ground Lights 2",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h7053.png",
+		sku: "H7053",
+		state: 1,
+		supportRazer: false,
+		supportDreamView: true,
+		ledCount: 30
+	},
+	H61B3: {
+		name: "3m RGBIC LED Strip Light with Cover",
+		deviceImage: "https://assets.signalrgb.com/devices/brands/govee/wifi/h61b2.png",
+		sku: "H61B3",
+		state: 1,
+		supportRazer: true,
+		supportDreamView: true,
+		ledCount: 30
+	},
 };
