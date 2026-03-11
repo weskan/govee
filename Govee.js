@@ -71,26 +71,24 @@ export function Shutdown(suspend){
 }
 
 function fetchDeviceInfoFromTableAndConfigure() {
-	if (GoveeDeviceLibrary.hasOwnProperty(controller.sku)) {
+	if(GoveeDeviceLibrary.hasOwnProperty(controller.sku)){
 		const GoveeDeviceInfo = GoveeDeviceLibrary[controller.sku];
 		device.setName(`Govee ${GoveeDeviceInfo.name}`);
 
-		// Special handling for H6048: split into two channels
+		// Special handling for H6048:
+		// keep one channel, but split the layout into two bars
 		if (controller.sku === "H6048") {
-			device.addChannel("Left Bar", 10);
-			device.channel("Left Bar").SetLedLimit(10);
-
-			device.addChannel("Right Bar", 10);
-			device.channel("Right Bar").SetLedLimit(10);
-
+			device.addChannel(`Channel 1`, 20);
+			device.channel(`Channel 1`).SetLedLimit(20);
 			device.SetLedLimit(20);
+			SetH6048LedMap();
 			return;
 		}
 
 		device.addChannel(`Channel 1`, GoveeDeviceInfo.ledCount);
 		device.channel(`Channel 1`).SetLedLimit(GoveeDeviceInfo.ledCount);
 		device.SetLedLimit(GoveeDeviceInfo.ledCount);
-	} else {
+	}else{
 		device.log(`SKU (${controller.sku}) not found, using single led mode!`);
 		device.setName(`Govee: ${controller.sku}`);
 		device.addChannel(`Channel 1`, 30);
